@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import TaskActions from "@/components/TaskActions"; // Assuming you have a TaskActions component
+import EditTaskDialog from "@/components/EditTaskDialog"; // Assuming you have an EditTaskDialog component
 
 interface Task {
   id: string;
@@ -26,6 +28,8 @@ const Calendar = () => {
   const [newTaskTime, setNewTaskTime] = useState("");
   const [isListening, setIsListening] = useState(false);
   const { toast } = useToast();
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   const recognition = typeof window !== "undefined" 
     ? new (window as any).webkitSpeechRecognition()
@@ -94,6 +98,7 @@ const Calendar = () => {
     setNewTask("");
     setNewTaskDescription("");
     setNewTaskTime("");
+    setIsAddTaskOpen(false);
 
     // Schedule notification
     if (task.reminder) {
@@ -104,7 +109,7 @@ const Calendar = () => {
       }
 
       if (Notification.permission === "granted") {
-        const notification = new Notification("Task Reminder", {
+        new Notification("Task Reminder", {
           body: task.title,
           icon: "/favicon.ico",
         });
@@ -123,6 +128,24 @@ const Calendar = () => {
         task.id === id ? { ...task, completed: !task.completed } : task
       )
     );
+  };
+
+  const deleteTask = (id: string) => {
+    setTasks(tasks.filter(task => task.id !== id));
+    toast({
+      title: "Task Deleted",
+      description: "The task has been deleted successfully",
+    });
+  };
+
+  const updateTask = (updatedTask: Task) => {
+    setTasks(tasks.map(task => 
+      task.id === updatedTask.id ? updatedTask : task
+    ));
+    toast({
+      title: "Task Updated",
+      description: "The task has been updated successfully",
+    });
   };
 
   const requestNotificationPermission = async () => {
@@ -165,7 +188,7 @@ const Calendar = () => {
           </div>
 
           <div className="space-y-4">
-            <Dialog>
+            <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
@@ -229,12 +252,28 @@ const Calendar = () => {
                         )}
                       </div>
                       {task.reminder && <Bell className="h-4 w-4 text-gray-400" />}
+                      <TaskActions
+                        onEdit={() => setEditingTask(task)}
+                        onDelete={() => deleteTask(task.id)}
+                      />
                     </div>
                   </Card>
                 ))}
             </div>
           </div>
         </div>
+
+        {editingTask && (
+          <EditTaskDialog
+            task={editingTask}
+            open={!!editingTask}
+            onClose={() => setEditingTask(null)}
+            onSave={(updatedTask) => {
+              updateTask(updatedTask);
+              setEditingTask(null);
+            }}
+          />
+        )}
       </Card>
     </div>
   );

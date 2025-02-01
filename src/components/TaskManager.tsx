@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import TaskActions from "./TaskActions"; // Assuming you have a TaskActions component
+import EditTaskDialog from "./EditTaskDialog"; // Assuming you have an EditTaskDialog component
 
 interface Task {
   id: number;
@@ -17,6 +19,7 @@ const TaskManager = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null); // State for editing tasks
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -93,6 +96,24 @@ const TaskManager = () => {
     );
   };
 
+  const deleteTask = (id: number) => {
+    setTasks(tasks.filter(task => task.id !== id));
+    toast({
+      title: "Task Deleted",
+      description: "The task has been deleted successfully",
+    });
+  };
+
+  const updateTask = (updatedTask: Task) => {
+    setTasks(tasks.map(task => 
+      task.id === updatedTask.id ? updatedTask : task
+    ));
+    toast({
+      title: "Task Updated",
+      description: "The task has been updated successfully",
+    });
+  };
+
   return (
     <Card className="p-4 animate-fade-in">
       <div className="flex justify-between items-center mb-4">
@@ -146,9 +167,26 @@ const TaskManager = () => {
             >
               {task.title}
             </span>
+            <TaskActions
+              onEdit={() => setEditingTask(task)}
+              onDelete={() => deleteTask(task.id)}
+            />
           </div>
         ))}
       </div>
+
+      {editingTask && (
+  <EditTaskDialog
+    task={editingTask as Task} // Type assertion
+    open={!!editingTask}
+    onClose={() => setEditingTask(null)}
+    onSave={(updatedTask: Task) => {
+      updateTask(updatedTask);
+      setEditingTask(null);
+    }}
+  />
+)}
+ 
     </Card>
   );
 };
