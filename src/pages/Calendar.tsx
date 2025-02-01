@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import TaskActions from "@/components/TaskActions";
 import EditTaskDialog from "@/components/EditTaskDialog";
-import TaskManager from "@/components/TaskManager"; // ✅ IMPORT TASK MANAGER
-import AuthContext from "../context/AuthContext"; // ✅ IMPORT AUTH CONTEXT
+import TaskManager from "@/components/TaskManager"; 
+import AuthContext from "../context/AuthContext"; 
 
 const Calendar = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -27,10 +27,10 @@ const Calendar = () => {
   const { toast } = useToast();
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
-  const { tasks, addTask, fetchTasks } = useContext(AuthContext); // ✅ USE AUTH CONTEXT
+  const { tasks, addTask, fetchTasks } = useContext(AuthContext);
 
   useEffect(() => {
-    fetchTasks(); // ✅ FETCH TASKS FROM BACKEND ON LOAD
+    fetchTasks(); 
   }, []);
 
   const handleAddTask = async (title: string = newTask) => {
@@ -117,7 +117,6 @@ const Calendar = () => {
               </DialogContent>
             </Dialog>
 
-            {/* ✅ USE TASK MANAGER HERE */}
             <TaskManager />
           </div>
         </div>

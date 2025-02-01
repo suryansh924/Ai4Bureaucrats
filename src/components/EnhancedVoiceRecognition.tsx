@@ -3,7 +3,6 @@ import { Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-const API_KEY = "AIzaSyDfVZmPBLiex7cPwtYiyg45yJjy2V2jhNg"; // Replace with actual API key
 const API_URL = "https://speech.googleapis.com/v1/speech:recognize";
 
 const EnhancedVoiceRecognition = ({ onTranscriptionComplete }) => {
@@ -56,11 +55,14 @@ const EnhancedVoiceRecognition = ({ onTranscriptionComplete }) => {
         };
 
         try {
-          const response = await fetch(`${API_URL}?key=${API_KEY}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(requestBody),
-          });
+          const response = await fetch(
+            `${API_URL}?key=${import.meta.env.API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestBody),
+            }
+          );
 
           const data = await response.json();
           if (data.results) {

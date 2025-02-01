@@ -20,7 +20,6 @@ import ReactMarkdown from "react-markdown";
 import EnhancedVoiceRecognition from "./EnhancedVoiceRecognition";
 
 // ✅ Replace with your Gemini API Key
-const GEMINI_API_KEY = "AIzaSyBca0qpaK10qA5pBfIvJ397j4CunPeegQo";
 
 const VoiceDictation = () => {
   const { user, addNote, updateNote, deleteNote, notes } =
@@ -103,7 +102,9 @@ const VoiceDictation = () => {
       const prompt = `Write about: ${aiPrompt}. Make it professional and structured.`;
 
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${
+          import.meta.env.GEMINI_API_KEY
+        }`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
