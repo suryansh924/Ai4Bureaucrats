@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Header from "./components/Header";
 import MobileNav from "./components/MobileNav";
+import PrivateNotes from "./pages/PrivateNotes";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,10 @@ const App: React.FC = () => {
               <Route
                 path="/notes"
                 element={<PrivateRoute element={<Notes />} />}
+              />
+              <Route
+                path="/private-notes"
+                element={<PrivateRoute element={<PrivateNotes />} />}
               />
               <Route
                 path="/calendar"
