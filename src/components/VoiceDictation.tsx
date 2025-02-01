@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Mic, Square, Save, Check, Loader2, Lock, Play, PenSquare } from "lucide-react";
+import { Mic, Square, Save, Check, Loader2, Play, PenSquare, MoreVertical, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,12 +8,17 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { generateSpeech } from "@/utils/textToSpeech";
 import { generateAIText } from "@/utils/aiWriter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useNavigate } from "react-router-dom";
 
 interface Note {
   id: string;
   text: string;
-  isPrivate: boolean;
-  password?: string;
 }
 
 const VoiceDictation = () => {
@@ -24,9 +29,8 @@ const VoiceDictation = () => {
   const [savedNotes, setSavedNotes] = useState<Note[]>([]);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [notePassword, setNotePassword] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const recognition = useCallback(() => {
     if ('webkitSpeechRecognition' in window) {
@@ -140,17 +144,43 @@ const VoiceDictation = () => {
     const newNote: Note = {
       id: Date.now().toString(),
       text: textToSave,
-      isPrivate,
-      ...(isPrivate && notePassword ? { password: notePassword } : {}),
     };
     setSavedNotes([...savedNotes, newNote]);
     setTranscript("");
     setCorrectedTranscript("");
-    setIsPrivate(false);
-    setNotePassword("");
     toast({
       title: "Note Saved",
       description: "Your note has been saved successfully",
+    });
+  };
+
+  const moveToPrivate = async (noteId: string) => {
+    const storedPassword = localStorage.getItem('private_notes_password');
+    if (!storedPassword) {
+      toast({
+        title: "Setup Required",
+        description: "You need to set up private notes first",
+      });
+      navigate('/private-notes');
+      return;
+    }
+    
+    const noteToMove = savedNotes.find(note => note.id === noteId);
+    if (noteToMove) {
+      setSavedNotes(savedNotes.filter(note => note.id !== noteId));
+      toast({
+        title: "Note Moved",
+        description: "Note moved to private section",
+      });
+      navigate('/private-notes');
+    }
+  };
+
+  const deleteNote = (id: string) => {
+    setSavedNotes(savedNotes.filter(note => note.id !== id));
+    toast({
+      title: "Note Deleted",
+      description: "Your note has been deleted",
     });
   };
 
@@ -263,30 +293,6 @@ const VoiceDictation = () => {
           </div>
         )}
 
-        <div className="flex items-center gap-4 mt-4">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="private"
-              checked={isPrivate}
-              onChange={(e) => setIsPrivate(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <label htmlFor="private" className="text-sm text-gray-600">
-              Private Note
-            </label>
-          </div>
-          {isPrivate && (
-            <Input
-              type="password"
-              placeholder="Enter password to protect note"
-              value={notePassword}
-              onChange={(e) => setNotePassword(e.target.value)}
-              className="max-w-xs"
-            />
-          )}
-        </div>
-
         {savedNotes.length > 0 && (
           <div className="mt-6">
             <h3 className="text-lg font-medium text-gray-700 mb-2">
@@ -298,9 +304,6 @@ const VoiceDictation = () => {
                   key={note.id}
                   className="p-4 bg-gray-50 rounded-md text-gray-800 hover:bg-gray-100 transition-colors relative"
                 >
-                  {note.isPrivate && (
-                    <Lock className="absolute top-4 right-4 h-4 w-4 text-gray-400" />
-                  )}
                   <p>{note.text}</p>
                   <div className="mt-2 flex justify-end gap-2">
                     <Button
@@ -311,6 +314,25 @@ const VoiceDictation = () => {
                       <Play className="mr-2 h-4 w-4" />
                       Play
                     </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => moveToPrivate(note.id)}>
+                          Move to Private
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => deleteNote(note.id)}
+                          className="text-red-600"
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}

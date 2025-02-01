@@ -14,6 +14,8 @@ interface PrivateNote {
   title?: string;
 }
 
+const PASSWORD_KEY = 'private_notes_password';
+
 const PrivateNotes = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
@@ -22,19 +24,41 @@ const PrivateNotes = () => {
   const [noteTitle, setNoteTitle] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
   const { toast } = useToast();
 
-  // Check if session is still valid
   useEffect(() => {
+    const storedPassword = localStorage.getItem(PASSWORD_KEY);
     const lastAuth = localStorage.getItem("lastAuth");
-    if (lastAuth && Date.now() - parseInt(lastAuth) < 30 * 60 * 1000) { // 30 minutes
+    if (storedPassword && lastAuth && Date.now() - parseInt(lastAuth) < 30 * 60 * 1000) {
       setIsAuthenticated(true);
+    } else if (!storedPassword) {
+      setIsSettingPassword(true);
     }
   }, []);
 
+  const setInitialPassword = () => {
+    if (password.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+    localStorage.setItem(PASSWORD_KEY, password);
+    setIsAuthenticated(true);
+    setIsSettingPassword(false);
+    localStorage.setItem("lastAuth", Date.now().toString());
+    toast({
+      title: "Password Set",
+      description: "Your password has been set successfully",
+    });
+  };
+
   const authenticate = () => {
-    // In a real app, this would validate against a stored password
-    if (password === "your-secure-password") {
+    const storedPassword = localStorage.getItem(PASSWORD_KEY);
+    if (password === storedPassword) {
       setIsAuthenticated(true);
       localStorage.setItem("lastAuth", Date.now().toString());
       toast({
@@ -103,6 +127,42 @@ const PrivateNotes = () => {
       description: "Your private note has been saved",
     });
   };
+
+  const deleteNote = (id: string) => {
+    setNotes(notes.filter(note => note.id !== id));
+    toast({
+      title: "Note Deleted",
+      description: "Your note has been deleted",
+    });
+  };
+
+  if (isSettingPassword) {
+    return (
+      <div className="container mx-auto p-4 max-w-md animate-fade-in">
+        <Card className="p-6">
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <Lock className="h-12 w-12 text-gray-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-center">Set Password</h1>
+            <p className="text-center text-gray-600">
+              Please set a password to protect your private notes
+            </p>
+            <Input
+              type="password"
+              placeholder="Enter new password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && setInitialPassword()}
+            />
+            <Button onClick={setInitialPassword} className="w-full">
+              Set Password
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
