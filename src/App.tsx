@@ -1,17 +1,25 @@
-import React from 'react';
+import React, { useContext } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AuthContext from "./context/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import PrivateNotes from "./pages/PrivateNotes";
 import Calendar from "./pages/Calendar";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Header from "./components/Header";
 import MobileNav from "./components/MobileNav";
 
 const queryClient = new QueryClient();
+
+const PrivateRoute = ({ element }: { element: JSX.Element }) => {
+  const { user } = useContext(AuthContext);
+  return user ? element : <Navigate to="/login" />;
+};
 
 const App: React.FC = () => {
   return (
@@ -21,9 +29,17 @@ const App: React.FC = () => {
           <Header />
           <div className="pt-16 pb-16 min-h-screen">
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/private-notes" element={<PrivateNotes />} />
-              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/" element={<PrivateRoute element={<Index />} />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/private-notes"
+                element={<PrivateRoute element={<PrivateNotes />} />}
+              />
+              <Route
+                path="/calendar"
+                element={<PrivateRoute element={<Calendar />} />}
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
