@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -169,12 +170,30 @@ const VoiceDictation = () => {
 
   const updateNote = () => {
     if (selectedNote) {
+      const updatedText = correctedTranscript || transcript;
+      
+      // Check if the note is empty after trimming whitespace
+      if (!updatedText.trim()) {
+        // Delete the note if it's empty
+        setSavedNotes(savedNotes.filter(note => note.id !== selectedNote.id));
+        setIsEditDialogOpen(false);
+        setSelectedNote(null);
+        setTranscript("");
+        setCorrectedTranscript("");
+        toast({
+          title: "Note Deleted",
+          description: "Empty note has been removed",
+        });
+        return;
+      }
+
+      // Update the note if it has content
       setSavedNotes(
         savedNotes.map((note) =>
           note.id === selectedNote.id
             ? {
                 ...note,
-                text: correctedTranscript || transcript,
+                text: updatedText,
                 lastEdited: new Date(),
               }
             : note
@@ -349,12 +368,16 @@ const VoiceDictation = () => {
         <DialogContent className="sm:max-w-[725px]">
           <DialogHeader>
             <DialogTitle>Edit Note</DialogTitle>
+            <DialogDescription>
+              Leave the note empty to delete it
+            </DialogDescription>
           </DialogHeader>
           <div className="mt-4 space-y-4">
             <Textarea
               className="min-h-[300px] text-lg leading-relaxed"
               value={transcript}
               onChange={(e) => setTranscript(e.target.value)}
+              placeholder="Start typing... (empty note will be deleted)"
             />
             {correctedTranscript && (
               <div className="p-4 bg-gray-50 rounded-md">
