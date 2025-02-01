@@ -1,13 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
-import { Mic, Square, Save, Check, Loader2, Play, PenSquare, MoreVertical, Trash } from "lucide-react";
+import { Mic, Square, Save, Loader2, PenSquare, MoreVertical, Trash, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { generateSpeech } from "@/utils/textToSpeech";
 import { generateAIText } from "@/utils/aiWriter";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +24,8 @@ import { useNavigate } from "react-router-dom";
 interface Note {
   id: string;
   text: string;
+  correctedText?: string;
+  lastEdited?: Date;
 }
 
 const VoiceDictation = () => {
@@ -29,6 +36,8 @@ const VoiceDictation = () => {
   const [savedNotes, setSavedNotes] = useState<Note[]>([]);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -41,6 +50,33 @@ const VoiceDictation = () => {
     }
     return null;
   }, []);
+
+  // Automatic grammar correction
+  useEffect(() => {
+    const debounceTimeout = setTimeout(async () => {
+      if (transcript && !isProcessing) {
+        setIsProcessing(true);
+        try {
+          const corrected = await generateAIText(
+            `Please correct the grammar and improve the writing style of the following text, while maintaining its original meaning: "${transcript}"`
+          );
+          if (corrected) {
+            setCorrectedTranscript(corrected);
+          }
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to correct grammar",
+            variant: "destructive",
+          });
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+    }, 1000); // Debounce for 1 second
+
+    return () => clearTimeout(debounceTimeout);
+  }, [transcript, toast]);
 
   useEffect(() => {
     const speechRecognition = recognition();
@@ -87,28 +123,6 @@ const VoiceDictation = () => {
     }
   };
 
-  const correctGrammar = async () => {
-    setIsProcessing(true);
-    try {
-      const corrected = await generateAIText(`Please correct the grammar and improve the writing style of the following text, while maintaining its original meaning: "${transcript}"`);
-      if (corrected) {
-        setCorrectedTranscript(corrected);
-        toast({
-          title: "Grammar Corrected",
-          description: "Your text has been processed",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to correct grammar",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const generateAIContent = async () => {
     setIsGenerating(true);
     try {
@@ -131,19 +145,12 @@ const VoiceDictation = () => {
     }
   };
 
-  const playText = async (text: string) => {
-    const audioUrl = await generateSpeech(text);
-    if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play();
-    }
-  };
-
   const saveNote = () => {
     const textToSave = correctedTranscript || transcript;
     const newNote: Note = {
       id: Date.now().toString(),
       text: textToSave,
+      lastEdited: new Date(),
     };
     setSavedNotes([...savedNotes, newNote]);
     setTranscript("");
@@ -152,6 +159,36 @@ const VoiceDictation = () => {
       title: "Note Saved",
       description: "Your note has been saved successfully",
     });
+  };
+
+  const editNote = (note: Note) => {
+    setSelectedNote(note);
+    setTranscript(note.text);
+    setIsEditDialogOpen(true);
+  };
+
+  const updateNote = () => {
+    if (selectedNote) {
+      setSavedNotes(
+        savedNotes.map((note) =>
+          note.id === selectedNote.id
+            ? {
+                ...note,
+                text: correctedTranscript || transcript,
+                lastEdited: new Date(),
+              }
+            : note
+        )
+      );
+      setIsEditDialogOpen(false);
+      setSelectedNote(null);
+      setTranscript("");
+      setCorrectedTranscript("");
+      toast({
+        title: "Note Updated",
+        description: "Your note has been updated successfully",
+      });
+    }
   };
 
   const moveToPrivate = async (noteId: string) => {
@@ -243,28 +280,7 @@ const VoiceDictation = () => {
         </div>
 
         {transcript && (
-          <div className="flex gap-2 justify-end">
-            <Button
-              onClick={correctGrammar}
-              variant="outline"
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Check className="mr-2 h-4 w-4" />
-                  Correct Grammar
-                </>
-              )}
-            </Button>
-            <Button onClick={() => playText(transcript)}>
-              <Play className="mr-2 h-4 w-4" />
-              Play Text
-            </Button>
+          <div className="flex justify-end">
             <Button onClick={saveNote}>
               <Save className="mr-2 h-4 w-4" />
               Save Note
@@ -279,16 +295,6 @@ const VoiceDictation = () => {
             </h3>
             <div className="p-4 bg-gray-50 rounded-md text-gray-800">
               {correctedTranscript}
-              <div className="mt-2 flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => playText(correctedTranscript)}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Play Corrected
-                </Button>
-              </div>
             </div>
           </div>
         )}
@@ -302,18 +308,16 @@ const VoiceDictation = () => {
               {savedNotes.map((note) => (
                 <div
                   key={note.id}
-                  className="p-4 bg-gray-50 rounded-md text-gray-800 hover:bg-gray-100 transition-colors relative"
+                  className="p-4 bg-gray-50 rounded-md text-gray-800 hover:bg-gray-100 transition-colors relative cursor-pointer"
+                  onClick={() => editNote(note)}
                 >
-                  <p>{note.text}</p>
+                  <p className="line-clamp-3">{note.text}</p>
+                  {note.lastEdited && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      Last edited: {note.lastEdited.toLocaleString()}
+                    </p>
+                  )}
                   <div className="mt-2 flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => playText(note.text)}
-                    >
-                      <Play className="mr-2 h-4 w-4" />
-                      Play
-                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
@@ -340,6 +344,33 @@ const VoiceDictation = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[725px]">
+          <DialogHeader>
+            <DialogTitle>Edit Note</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <Textarea
+              className="min-h-[300px] text-lg leading-relaxed"
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+            />
+            {correctedTranscript && (
+              <div className="p-4 bg-gray-50 rounded-md">
+                <h4 className="font-medium mb-2">Corrected Version</h4>
+                <p>{correctedTranscript}</p>
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={updateNote}>Save Changes</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
