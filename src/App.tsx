@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AuthContext from "./context/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import PrivateNotes from "./pages/PrivateNotes";
+import Notes from "./pages/Notes";
 import Calendar from "./pages/Calendar";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -33,8 +33,8 @@ const App: React.FC = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route
-                path="/private-notes"
-                element={<PrivateRoute element={<PrivateNotes />} />}
+                path="/notes"
+                element={<PrivateRoute element={<Notes />} />}
               />
               <Route
                 path="/calendar"

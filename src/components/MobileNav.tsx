@@ -11,37 +11,37 @@ const MobileNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 md:hidden">
       <div className="flex justify-around p-2">
-        <NavItem 
-          icon={<Home className="w-6 h-6" />} 
-          label="Home" 
-          active={isActive('/')} 
-          onClick={() => navigate('/')}
+        <NavItem
+          icon={<Home className="w-6 h-6" />}
+          label="Home"
+          active={isActive("/")}
+          onClick={() => navigate("/")}
         />
-        <NavItem 
-          icon={<FileText className="w-6 h-6" />} 
-          label="Notes" 
-          active={isActive('/private-notes')}
-          onClick={() => navigate('/private-notes')}
+        <NavItem
+          icon={<FileText className="w-6 h-6" />}
+          label="Notes"
+          active={isActive("/notes")}
+          onClick={() => navigate("/notes")}
         />
-        <NavItem 
-          icon={<Calendar className="w-6 h-6" />} 
-          label="Calendar" 
-          active={isActive('/calendar')}
-          onClick={() => navigate('/calendar')}
+        <NavItem
+          icon={<Calendar className="w-6 h-6" />}
+          label="Calendar"
+          active={isActive("/calendar")}
+          onClick={() => navigate("/calendar")}
         />
       </div>
     </nav>
   );
 };
 
-const NavItem = ({ 
-  icon, 
-  label, 
+const NavItem = ({
+  icon,
+  label,
   active = false,
-  onClick
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
   active?: boolean;
   onClick?: () => void;
 }) => {

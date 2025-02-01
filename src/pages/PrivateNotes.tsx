@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useContext, useState, useEffect } from "react";
 import { Lock, Unlock, Save, PenSquare, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { generateAIText } from "@/utils/aiWriter";
+import AuthContext from "../context/AuthContext";
 
 interface PrivateNote {
   id: string;
@@ -14,12 +15,12 @@ interface PrivateNote {
   title?: string;
 }
 
-const PASSWORD_KEY = 'private_notes_password';
+const PASSWORD_KEY = "private_notes_password";
 
 const PrivateNotes = () => {
+  const { notes, addNote } = useContext(AuthContext);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
-  const [notes, setNotes] = useState<PrivateNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [noteTitle, setNoteTitle] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
@@ -30,7 +31,11 @@ const PrivateNotes = () => {
   useEffect(() => {
     const storedPassword = localStorage.getItem(PASSWORD_KEY);
     const lastAuth = localStorage.getItem("lastAuth");
-    if (storedPassword && lastAuth && Date.now() - parseInt(lastAuth) < 30 * 60 * 1000) {
+    if (
+      storedPassword &&
+      lastAuth &&
+      Date.now() - parseInt(lastAuth) < 30 * 60 * 1000
+    ) {
       setIsAuthenticated(true);
     } else if (!storedPassword) {
       setIsSettingPassword(true);
@@ -85,7 +90,7 @@ const PrivateNotes = () => {
 
   const generateContent = async () => {
     if (!aiPrompt.trim()) return;
-    
+
     setIsGenerating(true);
     try {
       const generated = await generateAIText(aiPrompt);
@@ -109,79 +114,20 @@ const PrivateNotes = () => {
     }
   };
 
-  const saveNote = () => {
-    if (!newNote.trim()) return;
-
-    const note: PrivateNote = {
-      id: Date.now().toString(),
-      text: newNote,
-      createdAt: new Date(),
-      title: noteTitle,
-    };
-
-    setNotes([note, ...notes]);
-    setNewNote("");
-    setNoteTitle("");
-    toast({
-      title: "Note Saved",
-      description: "Your private note has been saved",
-    });
-  };
-
-  const deleteNote = (id: string) => {
-    setNotes(notes.filter(note => note.id !== id));
-    toast({
-      title: "Note Deleted",
-      description: "Your note has been deleted",
-    });
-  };
-
   if (isSettingPassword) {
     return (
       <div className="container mx-auto p-4 max-w-md animate-fade-in">
         <Card className="p-6">
           <div className="space-y-4">
-            <div className="flex justify-center">
-              <Lock className="h-12 w-12 text-gray-400" />
-            </div>
             <h1 className="text-2xl font-bold text-center">Set Password</h1>
-            <p className="text-center text-gray-600">
-              Please set a password to protect your private notes
-            </p>
             <Input
               type="password"
               placeholder="Enter new password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && setInitialPassword()}
             />
             <Button onClick={setInitialPassword} className="w-full">
               Set Password
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="container mx-auto p-4 max-w-md animate-fade-in">
-        <Card className="p-6">
-          <div className="space-y-4">
-            <div className="flex justify-center">
-              <Lock className="h-12 w-12 text-gray-400" />
-            </div>
-            <h1 className="text-2xl font-bold text-center">Private Notes</h1>
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && authenticate()}
-            />
-            <Button onClick={authenticate} className="w-full">
-              Unlock
             </Button>
           </div>
         </Card>
@@ -194,69 +140,39 @@ const PrivateNotes = () => {
       <Card className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Private Notes</h1>
-          <Button
-            variant="outline"
-            onClick={logout}
-            size="icon"
-          >
+          <Button variant="outline" onClick={logout} size="icon">
             <Unlock className="h-4 w-4" />
           </Button>
         </div>
 
         <div className="space-y-4">
-          <div className="flex gap-4">
-            <Input
-              placeholder="Enter topic or prompt for AI generation..."
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              onClick={generateContent}
-              disabled={isGenerating || !aiPrompt}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <PenSquare className="mr-2 h-4 w-4" />
-                  Generate
-                </>
-              )}
-            </Button>
-          </div>
-
           <Input
-            placeholder="Note title..."
-            value={noteTitle}
-            onChange={(e) => setNoteTitle(e.target.value)}
+            placeholder="Enter topic or prompt for AI generation..."
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
           />
-
+          <Button
+            onClick={generateContent}
+            disabled={isGenerating || !aiPrompt}
+          >
+            {isGenerating ? "Generating..." : "Generate"}
+          </Button>
           <Textarea
             placeholder="Write your private note..."
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
-            className="min-h-[200px]"
           />
-          
-          <Button onClick={saveNote} className="w-full">
+          <Button onClick={() => addNote(noteTitle, newNote)}>
             <Save className="mr-2 h-4 w-4" />
             Save Note
           </Button>
-
           <div className="space-y-4 mt-8">
             {notes.map((note) => (
               <Card key={note.id} className="p-4">
                 {note.title && (
                   <h3 className="font-medium mb-2">{note.title}</h3>
                 )}
-                <p className="whitespace-pre-wrap">{note.text}</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  {new Date(note.createdAt).toLocaleString()}
-                </p>
+                <p className="whitespace-pre-wrap">{note.content}</p>
               </Card>
             ))}
           </div>
