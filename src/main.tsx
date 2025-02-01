@@ -10,11 +10,27 @@ if (!rootElement) {
 }
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/service-worker.js").then(() => {
+  navigator.serviceWorker
+    .register("/service-worker.js")
+    .then((registration) => {
       console.log("Service Worker Registered");
-    });
-  });
+
+      // Listen for updates
+      registration.onupdatefound = () => {
+        const newSW = registration.installing;
+        if (newSW) {
+          newSW.onstatechange = () => {
+            if (newSW.state === "installed") {
+              if (navigator.serviceWorker.controller) {
+                console.log("New update available! Reloading...");
+                window.location.reload(); // Reload once
+              }
+            }
+          };
+        }
+      };
+    })
+    .catch((err) => console.error("Service Worker Registration Failed:", err));
 }
 
 const root = createRoot(rootElement);
