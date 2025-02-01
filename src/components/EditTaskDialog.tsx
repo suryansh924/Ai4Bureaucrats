@@ -1,14 +1,18 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 interface Task {
   id: string;
   title: string;
-  date: Date;
+  date: string;
   completed: boolean;
-  reminder?: boolean;
   description?: string;
   time?: string;
 }
@@ -16,19 +20,24 @@ interface Task {
 interface EditTaskDialogProps {
   task: Task;
   open: boolean;
-  
   onClose: () => void;
-  onSave: (updatedTask: Task) => void;
+  onSave: (updatedTask: Partial<Task>) => void;
 }
 
-const EditTaskDialog = ({ task, open, onClose, onSave }: EditTaskDialogProps) => {
+const EditTaskDialog = ({
+  task,
+  open,
+  onClose,
+  onSave,
+}: EditTaskDialogProps) => {
   const [editedTitle, setEditedTitle] = useState(task.title);
-  const [editedDescription, setEditedDescription] = useState(task.description || "");
+  const [editedDescription, setEditedDescription] = useState(
+    task.description || ""
+  );
   const [editedTime, setEditedTime] = useState(task.time || "");
 
   const handleSave = () => {
     onSave({
-      ...task,
       title: editedTitle,
       description: editedDescription,
       time: editedTime,
@@ -62,9 +71,7 @@ const EditTaskDialog = ({ task, open, onClose, onSave }: EditTaskDialogProps) =>
             <Button onClick={onClose} variant="outline">
               Cancel
             </Button>
-            <Button onClick={handleSave}>
-              Save Changes
-            </Button>
+            <Button onClick={handleSave}>Save Changes</Button>
           </div>
         </div>
       </DialogContent>

@@ -19,11 +19,11 @@ const TaskActions = ({ onEdit, onDelete }: TaskActionsProps) => (
       </button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
-      <DropdownMenuItem onClick={onEdit}>
+      <DropdownMenuItem onClick={() => onEdit()}>
         <Edit2 className="h-4 w-4 mr-2" />
         Edit
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={onDelete} className="text-red-600">
+      <DropdownMenuItem onClick={() => onDelete()} className="text-red-600">
         <Trash2 className="h-4 w-4 mr-2" />
         Delete
       </DropdownMenuItem>

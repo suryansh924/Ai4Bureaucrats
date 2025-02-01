@@ -9,6 +9,14 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").then(() => {
+      console.log("Service Worker Registered");
+    });
+  });
+}
+
 const root = createRoot(rootElement);
 root.render(
   <AuthProvider>

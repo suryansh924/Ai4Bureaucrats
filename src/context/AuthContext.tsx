@@ -1,8 +1,5 @@
 import React, { useState, useContext, createContext, useEffect } from "react";
 import axios from "axios";
-import { io } from "socket.io-client";
-
-const socket = io("http://localhost:5000");
 
 interface User {
   email: string;
@@ -13,7 +10,6 @@ interface Note {
   title: string;
   content: string;
   isPrivate: boolean;
-  tags?: string[];
   createdAt: Date;
 }
 
@@ -28,19 +24,29 @@ interface Task {
 
 interface AuthContextType {
   user: User | null;
+  isLoading: boolean;
+  tasks: Task[];
+  notes: Note[];
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  notes: Note[];
-  addNote: (title: string, content: string) => Promise<void>;
-  tasks: Task[];
+  fetchTasks: () => Promise<void>;
+  fetchNotes: () => Promise<void>;
   addTask: (
     title: string,
     description: string,
     date: string,
     time?: string
   ) => Promise<void>;
+  addNote: (
+    title: string,
+    content: string,
+    isPrivate: boolean
+  ) => Promise<void>;
   toggleTaskCompletion: (taskId: string) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
+  deleteNote: (noteId: string) => Promise<void>;
+  updateTask: (taskId: string, updatedTask: Partial<Task>) => Promise<void>;
+  updateNote: (noteId: string, updatedNote: Partial<Note>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -48,9 +54,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [user, setUser] = useState<User | null>(
+    JSON.parse(localStorage.getItem("user") || "null")
+  );
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -61,106 +70,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         })
         .then((res) => {
           setUser(res.data);
-          fetchNotes();
+          localStorage.setItem("user", JSON.stringify(res.data));
           fetchTasks();
+          fetchNotes();
         })
-        .catch(() => localStorage.removeItem("token"));
+        .catch(() => {
+          logout();
+        })
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    socket.on("taskAdded", (newTask) => {
-      setTasks((prevTasks) => [...prevTasks, newTask]);
-    });
-
-    socket.on("taskUpdated", (updatedTask) => {
-      setTasks((prevTasks) =>
-        prevTasks.map((task) =>
-          task.id === updatedTask.id ? updatedTask : task
-        )
-      );
-    });
-
-    socket.on("taskDeleted", (taskId) => {
-      setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
-    });
-
-    return () => {
-      socket.off("taskAdded");
-      socket.off("taskUpdated");
-      socket.off("taskDeleted");
-    };
-  }, []);
-
-  useEffect(() => {
-    socket.on("noteAdded", (newNote) => {
-      setNotes((prevNotes) => [...prevNotes, newNote]);
-    });
-
-    socket.on("noteUpdated", (updatedNote) => {
-      setNotes((prevNotes) =>
-        prevNotes.map((note) =>
-          note.id === updatedNote.id ? updatedNote : note
-        )
-      );
-    });
-
-    socket.on("noteDeleted", (noteId) => {
-      setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
-    });
-
-    return () => {
-      socket.off("noteAdded");
-      socket.off("noteUpdated");
-      socket.off("noteDeleted");
-    };
-  }, []);
-
   const login = async (email: string, password: string) => {
-    const res = await axios.post("http://localhost:5000/api/auth/login", {
-      email,
-      password,
-    });
-    localStorage.setItem("token", res.data.token);
-    setUser(res.data);
-    await fetchNotes();
-    await fetchTasks();
+    try {
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
+        email,
+        password,
+      });
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data));
+      setUser(res.data);
+      await fetchTasks();
+      await fetchNotes();
+    } catch (error) {
+      console.error("Login error:", error.response?.data || error);
+      throw new Error("Invalid credentials");
+    }
   };
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
-    setNotes([]);
     setTasks([]);
-  };
-
-  const fetchNotes = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      const res = await axios.get("http://localhost:5000/api/notes", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setNotes(res.data);
-    }
-  };
-
-  const addNote = async (title: string, content: string) => {
-    const token = localStorage.getItem("token");
-    const res = await axios.post(
-      "http://localhost:5000/api/notes",
-      { title, content },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    setNotes([...notes, res.data]);
+    setNotes([]);
   };
 
   const fetchTasks = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      const res = await axios.get("http://localhost:5000/api/tasks", {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get("http://localhost:5000/api/tasks", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setTasks(res.data);
+
+      if (!Array.isArray(data)) {
+        console.error("❌ API returned an invalid task list:", data);
+        return;
+      }
+
+      setTasks(
+        data.map((task) => ({
+          ...task,
+          id: task.id || task._id,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching tasks:", error.response?.data || error);
+    }
+  };
+
+  const fetchNotes = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get("http://localhost:5000/api/notes", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!Array.isArray(data)) {
+        console.error("❌ API returned an invalid note list:", data);
+        return;
+      }
+
+      setNotes(
+        data.map((note) => ({
+          ...note,
+          id: note.id || note._id,
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching notes:", error.response?.data || error);
     }
   };
 
@@ -170,41 +160,121 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     date: string,
     time?: string
   ) => {
-    const token = localStorage.getItem("token");
-    const res = await axios.post(
-      "http://localhost:5000/api/tasks",
-      { title, description, date, time },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    setTasks([...tasks, res.data]);
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        "http://localhost:5000/api/tasks",
+        { title, description, date, time },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTasks([...tasks, { ...data, id: data._id }]);
+    } catch (error) {
+      console.error("Error adding task:", error.response?.data || error);
+    }
+  };
+
+  const addNote = async (
+    title: string,
+    content: string,
+    isPrivate: boolean
+  ) => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        "http://localhost:5000/api/notes",
+        { title, content, isPrivate },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNotes([...notes, { ...data, id: data._id }]);
+    } catch (error) {
+      console.error("Error adding note:", error.response?.data || error);
+    }
   };
 
   const toggleTaskCompletion = async (taskId: string) => {
-    await axios.put(
-      `http://localhost:5000/api/tasks/${taskId}`,
-      {},
-      { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-    );
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.patch(
+        `http://localhost:5000/api/tasks/${taskId}/toggle`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTasks(tasks.map((task) => (task.id === taskId ? data : task)));
+    } catch (error) {
+      console.error("Error toggling task:", error.response?.data || error);
+    }
   };
 
   const deleteTask = async (taskId: string) => {
-    await axios.delete(`http://localhost:5000/api/tasks/${taskId}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    });
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTasks(tasks.filter((task) => task.id !== taskId));
+    } catch (error) {
+      console.error("Error deleting task:", error.response?.data || error);
+    }
+  };
+
+  const deleteNote = async (noteId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/notes/${noteId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setNotes(notes.filter((note) => note.id !== noteId));
+    } catch (error) {
+      console.error("Error deleting note:", error.response?.data || error);
+    }
+  };
+
+  const updateTask = async (taskId: string, updatedTask: Partial<Task>) => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.put(
+        `http://localhost:5000/api/tasks/${taskId}`,
+        updatedTask,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setTasks(tasks.map((task) => (task.id === taskId ? data : task)));
+    } catch (error) {
+      console.error("Error updating task:", error.response?.data || error);
+    }
+  };
+
+  const updateNote = async (noteId: string, updatedNote: Partial<Note>) => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.put(
+        `http://localhost:5000/api/notes/${noteId}`,
+        updatedNote,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNotes(notes.map((note) => (note.id === noteId ? data : note)));
+    } catch (error) {
+      console.error("Error updating note:", error.response?.data || error);
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        isLoading,
+        tasks,
+        notes,
         login,
         logout,
-        notes,
-        addNote,
-        tasks,
+        fetchTasks,
+        fetchNotes,
         addTask,
+        addNote,
         toggleTaskCompletion,
         deleteTask,
+        deleteNote,
+        updateTask,
+        updateNote,
       }}
     >
       {children}

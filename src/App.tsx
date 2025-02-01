@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,14 +14,25 @@ import Register from "./pages/Register";
 import Header from "./components/Header";
 import MobileNav from "./components/MobileNav";
 import PrivateNotes from "./pages/PrivateNotes";
-
 const queryClient = new QueryClient();
 
 const PrivateRoute = ({ element }: { element: JSX.Element }) => {
   const { user } = useContext(AuthContext);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    setAuthChecked(true);
+  }, [user]);
+
+  if (!authChecked)
+    return (
+      <div className="h-screen flex justify-center items-center">
+        Loading...
+      </div>
+    );
+
   return user ? element : <Navigate to="/login" />;
 };
-
 const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>

@@ -1,16 +1,19 @@
 const express = require("express");
 const {
-  createTask,
   getTasks,
-  updateTaskCompletion,
+  addTask,
+  updateTask,
   deleteTask,
+  toggleTaskCompletion,
 } = require("../controllers/taskController");
 const { protect } = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-router.post("/", protect, createTask);
 router.get("/", protect, getTasks);
-router.put("/:taskId", protect, updateTaskCompletion); // Toggle completion
+router.post("/", protect, addTask);
+router.put("/:taskId", protect, updateTask);
 router.delete("/:taskId", protect, deleteTask);
+router.patch("/:taskId/toggle", protect, toggleTaskCompletion);
 
 module.exports = router;
