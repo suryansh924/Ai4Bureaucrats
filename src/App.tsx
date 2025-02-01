@@ -13,23 +13,29 @@ const queryClient = new QueryClient();
 
 const App: React.FC = () => {
   return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/private-notes" element={<PrivateNotes />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+          <Sonner />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
+
+const AppWrapper: React.FC = () => {
+  return (
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/private-notes" element={<PrivateNotes />} />
-              <Route path="/calendar" element={<Calendar />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-            <Sonner />
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
+      <App />
     </React.StrictMode>
   );
 };
 
-export default App;
+export default AppWrapper;
