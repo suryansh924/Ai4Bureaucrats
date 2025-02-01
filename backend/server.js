@@ -16,7 +16,9 @@ connectDB();
 const app = express();
 
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:8080", credentials: true }));
+app.use(
+  cors({ origin: "https://ai4-bureaucrats.vercel.app", credentials: true })
+);
 app.use(cookieParser());
 
 // const server = http.createServer(app);
