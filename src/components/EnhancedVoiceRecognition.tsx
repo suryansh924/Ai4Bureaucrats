@@ -56,7 +56,7 @@ const EnhancedVoiceRecognition = ({ onTranscriptionComplete }) => {
 
         try {
           const response = await fetch(
-            `${API_URL}?key=${import.meta.env.API_KEY}`,
+            `${API_URL}?key=${import.meta.env.VITE_API_KEY}`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
